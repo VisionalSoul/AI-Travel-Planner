@@ -1,0 +1,64 @@
+version: '3.8'
+
+services:
+  # MySQL数据库服务
+  db:
+    image: mysql:8.0
+    container_name: ai_travel_planner_db
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: your_mysql_password
+      MYSQL_DATABASE: ai_travel_planner
+      MYSQL_USER: ai_travel_planner
+      MYSQL_PASSWORD: ai_travel_planner_password
+    volumes:
+      - db_data:/var/lib/mysql
+      - ./backend/init-db.sql:/docker-entrypoint-initdb.d/init-db.sql
+    ports:
+      - "3306:3306"
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  # 后端服务
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: ai_travel_planner_backend
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      PORT: 5000
+      MYSQL_HOST: db
+      MYSQL_PORT: 3306
+      MYSQL_USER: ai_travel_planner
+      MYSQL_PASSWORD: ai_travel_planner_password
+      MYSQL_DATABASE: ai_travel_planner
+      JWT_SECRET: your_jwt_secret_key_change_in_production
+      ALIYUN_BAILIAN_APPKEY: ${ALIYUN_BAILIAN_APPKEY:-}
+      ALIYUN_BAILIAN_APPSECRET: ${ALIYUN_BAILIAN_APPSECRET:-}
+    ports:
+      - "5000:5000"
+
+  # 前端服务
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: ai_travel_planner_frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+    ports:
+      - "80:80"
+    environment:
+      - VITE_API_URL=http://localhost:5000
+
+volumes:
+  db_data:
