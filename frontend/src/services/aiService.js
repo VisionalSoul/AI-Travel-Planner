@@ -16,19 +16,65 @@ class AIService {
    */
   getSettings() {
     if (!this._settings) {
+      console.log('开始获取settings store...')
       // 在Vue组件上下文内调用useSettingsStore()
       try {
-        this._settings = useSettingsStore()
+        // 尝试获取settings store
+        const store = useSettingsStore()
+        console.log('成功获取settings store实例')
+        
+        // 创建一个增强的对象，确保包含正确的函数形式
+        this._settings = {
+          ...store,
+          // 确保getApiKey是函数
+          getApiKey: typeof store.getApiKey === 'function' 
+            ? store.getApiKey 
+            : () => {
+                console.log('使用后备getApiKey函数')
+                return store.ai?.apiKey || ''
+              },
+          // 确保getModel是函数
+          getModel: typeof store.getModel === 'function'
+            ? store.getModel
+            : () => {
+                console.log('使用后备getModel函数')
+                return store.ai?.model || 'gpt-3.5-turbo'
+              }
+        }
+        
+        console.log('增强后的store类型检查:', {
+          hasGetApiKey: typeof this._settings.getApiKey === 'function',
+          hasGetModel: typeof this._settings.getModel === 'function'
+        })
       } catch (error) {
         console.error('无法获取settings store，请确保在Vue组件上下文中使用此服务:', error)
         // 创建一个默认的mock对象避免应用崩溃
+        console.log('创建mock settings对象')
         this._settings = {
-          getProvider: 'openai',
-          getApiKey: '',
-          getModel: 'gpt-3.5-turbo'
+          getProvider: () => 'openai',
+          getApiKey: () => '',
+          getModel: () => 'gpt-3.5-turbo',
+          ai: {
+            provider: 'openai',
+            apiKey: '',
+            model: 'gpt-3.5-turbo'
+          }
         }
       }
     }
+    
+    // 最终验证：确保返回的对象始终具有正确的函数
+    if (typeof this._settings.getApiKey !== 'function') {
+      console.error('发现getApiKey不是函数，强制修复')
+      this._settings.getApiKey = () => this._settings.ai?.apiKey || ''
+    }
+    
+    if (typeof this._settings.getModel !== 'function') {
+      console.error('发现getModel不是函数，强制修复')
+      this._settings.getModel = () => this._settings.ai?.model || 'gpt-3.5-turbo'
+    }
+    
+    console.log('返回最终验证后的settings实例')
     return this._settings
   }
 
@@ -61,6 +107,8 @@ class AIService {
       } else if (provider === 'baidu') {
         // 百度文心一言API的认证可能需要其他方式
         // 这里简化处理
+      } else if (provider === 'aliyun-bailian') {
+        headers['Authorization'] = `Bearer ${apiKey}`
       }
     }
     
@@ -364,14 +412,59 @@ class AIService {
    */
   async callAliyunBailian(prompt) {
     try {
+      console.log('开始调用阿里云百炼API...')
+      console.log('获取settings实例...')
+      const settings = this.getSettings()
+      
+      console.log('检查getApiKey类型:', typeof settings.getApiKey)
+      // 防御性编程：处理getApiKey可能不是函数的情况
+      let apiKey = ''
+      if (typeof settings.getApiKey === 'function') {
+        apiKey = settings.getApiKey()
+        console.log('通过函数调用获取API密钥')
+      } else if (typeof settings.ai?.apiKey === 'string') {
+        // 备选方案：直接从ai.apiKey获取
+        apiKey = settings.ai.apiKey
+        console.log('通过ai.apiKey属性获取API密钥')
+      } else if (typeof settings.getApiKey === 'string') {
+        // 兼容旧版本：如果是字符串则直接使用
+        apiKey = settings.getApiKey
+        console.log('直接使用getApiKey字符串')
+      }
+      
+      console.log('API密钥获取结果:', apiKey ? '已配置(长度:' + apiKey.length + ')' : '未配置')
+      
+      if (!apiKey) {
+        throw new Error('未配置阿里云百炼API密钥')
+      }
+      
+      console.log('检查getModel类型:', typeof settings.getModel)
+      // 防御性编程：处理getModel可能不是函数的情况
+      let model = 'qwen3-vl-32b-thinking'
+      if (typeof settings.getModel === 'function') {
+        model = settings.getModel() || model
+        console.log('通过函数调用获取模型')
+      } else if (typeof settings.ai?.model === 'string') {
+        // 备选方案：直接从ai.model获取
+        model = settings.ai.model
+        console.log('通过ai.model属性获取模型')
+      } else if (typeof settings.getModel === 'string') {
+        // 兼容旧版本：如果是字符串则直接使用
+        model = settings.getModel
+        console.log('直接使用getModel字符串')
+      }
+      
+      console.log('使用的模型:', model)
+      
       const response = await fetch('/api/ai/generate-trip', {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${apiKey}`
         },
         body: JSON.stringify({
           content: prompt,
-          model: 'qwen-max'
+          model: model
         })
       })
       
@@ -433,7 +526,13 @@ class AIService {
    */
   parseAliyunBailianResponse(response) {
     try {
-      // 阿里云百炼平台的响应格式可能不同，根据实际情况调整
+      // 检查是否是标准的后端响应格式 { success: true, data: {...} }
+      if (response.success && response.data) {
+        console.log('使用标准后端响应格式解析行程数据')
+        return response.data
+      }
+      
+      // 备用解析逻辑
       const content = response.content || JSON.stringify(response)
       
       // 提取JSON内容

@@ -9,7 +9,7 @@ export const useSettingsStore = defineStore('settings', {
     ai: {
       provider: localStorage.getItem('ai_provider') || 'aliyun-bailian', // openai, anthropic, baidu, aliyun-bailian
       apiKey: localStorage.getItem('ai_api_key') || '',
-      model: localStorage.getItem('ai_model') || 'qwen-turbo',
+      model: localStorage.getItem('ai_model') || 'qwen-plus',
     },
     
     // 语音识别配置
@@ -136,7 +136,7 @@ export const useSettingsStore = defineStore('settings', {
       } else if (provider === 'baidu') {
         this.setModel('ERNIE-Bot-4')
       } else if (provider === 'aliyun-bailian') {
-        this.setModel('qwen-turbo')
+        this.setModel('qwen-plus')
       }
     },
     
@@ -234,6 +234,27 @@ export const useSettingsStore = defineStore('settings', {
       localStorage.setItem('map_api_key', apiKey)
     },
     
+    // 刷新设置，从localStorage重新读取最新值
+    refreshSettings() {
+      console.log('refreshSettings 调用 - localStorage状态:', {
+        ai_provider: localStorage.getItem('ai_provider'),
+        ai_api_key_exists: !!localStorage.getItem('ai_api_key'),
+        ai_api_key_preview: localStorage.getItem('ai_api_key') ? localStorage.getItem('ai_api_key').substring(0, 5) + '...' : ''
+      })
+      
+      this.ai.provider = localStorage.getItem('ai_provider') || 'aliyun-bailian'
+      this.ai.apiKey = localStorage.getItem('ai_api_key') || ''
+      this.ai.model = localStorage.getItem('ai_model') || 'qwen-turbo'
+      
+      console.log('refreshSettings 完成 - store状态更新为:', {
+        provider: this.ai.provider,
+        apiKey_exists: !!this.ai.apiKey,
+        apiKey_preview: this.ai.apiKey ? this.ai.apiKey.substring(0, 5) + '...' : ''
+      })
+      
+      return this.ai.apiKey
+    },
+    
     /**
      * 更新用户旅行偏好
      * @param {Object} preferences - 旅行偏好对象
@@ -284,7 +305,7 @@ export const useSettingsStore = defineStore('settings', {
       // 清除AI设置
       this.ai.provider = 'aliyun-bailian'
       this.ai.apiKey = ''
-      this.ai.model = 'qwen-turbo'
+      this.ai.model = 'qwen-plus'
       
       // 清除语音设置
       this.speech.provider = 'browser'
@@ -437,4 +458,3 @@ export const useSettingsStore = defineStore('settings', {
 })
 
 // 导出store实例，便于直接使用
-export const settingsStore = useSettingsStore()

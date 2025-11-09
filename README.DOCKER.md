@@ -16,12 +16,10 @@
 
 ```bash
 # Linux/Mac
-export ALIYUN_BAILIAN_APPKEY=your_appkey
-export ALIYUN_BAILIAN_APPSECRET=your_appsecret
+export ALIYUN_BAILIAN_API_KEY=your_api_key
 
 # Windows (PowerShell)
-$env:ALIYUN_BAILIAN_APPKEY="your_appkey"
-$env:ALIYUN_BAILIAN_APPSECRET="your_appsecret"
+$env:ALIYUN_BAILIAN_API_KEY="your_api_key"
 ```
 
 ### 启动应用

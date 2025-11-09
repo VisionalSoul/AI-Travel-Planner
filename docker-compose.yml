@@ -41,8 +41,9 @@ services:
       MYSQL_PASSWORD: ai_travel_planner_password
       MYSQL_DATABASE: ai_travel_planner
       JWT_SECRET: your_jwt_secret_key_change_in_production
-      ALIYUN_BAILIAN_APPKEY: ${ALIYUN_BAILIAN_APPKEY:-}
-      ALIYUN_BAILIAN_APPSECRET: ${ALIYUN_BAILIAN_APPSECRET:-}
+      # 阿里云百炼配置
+      ALIYUN_BAILIAN_API_KEY: ${ALIYUN_BAILIAN_API_KEY:-}
+      ALIYUN_BAILIAN_ENDPOINT: ${ALIYUN_BAILIAN_ENDPOINT:-https://dashscope.aliyuncs.com/api/v1/services/aigc/text-generation/generation}
     ports:
       - "5000:5000"
 

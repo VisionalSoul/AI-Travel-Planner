@@ -8,8 +8,7 @@ const AIProviderSettings = () => {
   const [anthropicKey, setAnthropicKey] = useState(settings.anthropicApiKey || '');
   const [baiduKey, setBaiduKey] = useState(settings.baiduApiKey || '');
   const [baiduSecretKey, setBaiduSecretKey] = useState(settings.baiduSecretKey || '');
-  const [aliyunBailianAppkey, setAliyunBailianAppkey] = useState(settings.aliyunBailianAppkey || '');
-  const [aliyunBailianAppsecret, setAliyunBailianAppsecret] = useState(settings.aliyunBailianAppsecret || '');
+  const [aliyunBailianApiKey, setAliyunBailianApiKey] = useState(settings.aliyunBailianApiKey || '');
   const [selectedProvider, setSelectedProvider] = useState(settings.aiProvider || 'aliyun-bailian');
 
   // 保存API密钥
@@ -26,8 +25,7 @@ const AIProviderSettings = () => {
         updateApiKey('baiduSecretKey', baiduSecretKey);
         break;
       case 'aliyun-bailian':
-        updateApiKey('aliyunBailianAppkey', aliyunBailianAppkey);
-        updateApiKey('aliyunBailianAppsecret', aliyunBailianAppsecret);
+        updateApiKey('aliyunBailianApiKey', aliyunBailianApiKey);
         break;
       default:
         break;
@@ -80,24 +78,13 @@ const AIProviderSettings = () => {
         <div className="provider-config">
           <h4>阿里云百炼平台配置</h4>
           <div className="input-group">
-            <label htmlFor="aliyunBailianAppkey">AppKey：</label>
+            <label htmlFor="aliyunBailianApiKey">API Key：</label>
             <input
-              id="aliyunBailianAppkey"
+              id="aliyunBailianApiKey"
               type="password"
-              value={aliyunBailianAppkey}
-              onChange={(e) => setAliyunBailianAppkey(e.target.value)}
-              placeholder="请输入您的阿里云百炼AppKey"
-            />
-            <button onClick={() => handleSaveKey('aliyun-bailian')}>保存</button>
-          </div>
-          <div className="input-group">
-            <label htmlFor="aliyunBailianAppsecret">AppSecret：</label>
-            <input
-              id="aliyunBailianAppsecret"
-              type="password"
-              value={aliyunBailianAppsecret}
-              onChange={(e) => setAliyunBailianAppsecret(e.target.value)}
-              placeholder="请输入您的阿里云百炼AppSecret"
+              value={aliyunBailianApiKey}
+              onChange={(e) => setAliyunBailianApiKey(e.target.value)}
+              placeholder="请输入您的阿里云百炼API Key"
             />
             <button onClick={() => handleSaveKey('aliyun-bailian')}>保存</button>
           </div>

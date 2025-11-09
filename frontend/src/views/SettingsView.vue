@@ -163,26 +163,13 @@
               <!-- 阿里云百炼配置 -->
               <el-form-item 
                 v-if="aiSettings.provider === 'aliyun-bailian'"
-                label="AppKey" 
-                prop="appKey"
-                :rules="[{ required: true, message: '请输入AppKey', trigger: 'blur' }]"
+                label="API Key" 
+                prop="apiKey"
+                :rules="[{ required: true, message: '请输入API Key', trigger: 'blur' }]"
               >
                 <el-input 
-                  v-model="aiSettings.appKey" 
-                  placeholder="请输入阿里云百炼AppKey"
-                  show-password
-                />
-              </el-form-item>
-              
-              <el-form-item 
-                v-if="aiSettings.provider === 'aliyun-bailian'"
-                label="AppSecret" 
-                prop="appSecret"
-                :rules="[{ required: true, message: '请输入AppSecret', trigger: 'blur' }]"
-              >
-                <el-input 
-                  v-model="aiSettings.appSecret" 
-                  placeholder="请输入阿里云百炼AppSecret"
+                  v-model="aiSettings.apiKey" 
+                  placeholder="请输入阿里云百炼API Key"
                   show-password
                 />
               </el-form-item>
@@ -307,13 +294,11 @@ export default {
       preferences: [] // 旅行偏好
     })
     
-    // AI 设置
+    // AI设置
     const aiSettings = reactive({
-      provider: 'openai', // OpenAI, Anthropic, Azure
+      provider: 'aliyun-bailian', // AI服务提供商
       apiKey: '', // API Key
-      appKey: '', // 阿里云百炼AppKey
-      appSecret: '', // 阿里云百炼AppSecret
-      model: 'gpt-3.5-turbo' // 默认模型
+      model: 'qwen-plus' // 默认模型
     })
     
     // 可用模型（根据提供商动态变化）
@@ -321,6 +306,7 @@ export default {
       switch (aiSettings.provider) {
         case 'aliyun-bailian':
           return [
+            { label: '通义千问 VL 32B Thinking', value: 'qwen3-vl-32b-thinking' },
             { label: '通义千问 Plus', value: 'qwen-plus' },
             { label: '通义千问 Turbo', value: 'qwen-turbo' },
             { label: '通义千问 Max', value: 'qwen-max' }
@@ -361,17 +347,12 @@ export default {
       }
       
       // 加载AI设置
-      aiSettings.provider = localStorage.getItem('ai_provider') || 'openai'
+      aiSettings.provider = localStorage.getItem('ai_provider') || 'aliyun-bailian'
       
-      // 加载对应的凭证
-      if (aiSettings.provider === 'aliyun-bailian') {
-        aiSettings.appKey = localStorage.getItem('ai_app_key') || ''
-        aiSettings.appSecret = localStorage.getItem('ai_app_secret') || ''
-      } else {
-        aiSettings.apiKey = localStorage.getItem('ai_api_key') || ''
-      }
+      // 加载对应的凭证 - 统一从ai_api_key读取API密钥
+      aiSettings.apiKey = localStorage.getItem('ai_api_key') || ''
       
-      aiSettings.model = localStorage.getItem('ai_model') || 'gpt-3.5-turbo'
+      aiSettings.model = localStorage.getItem('ai_model') || 'qwen-plus'
       
       // 加载用户偏好
       const savedPreferences = localStorage.getItem('userPreferences')
@@ -415,18 +396,27 @@ export default {
     // 保存AI设置
     const saveAISettings = async () => {
       try {
+        console.log('保存AI设置前检查:', {
+          provider: aiSettings.provider,
+          apiKey_set: !!aiSettings.apiKey,
+          apiKey_preview: aiSettings.apiKey ? aiSettings.apiKey.substring(0, 5) + '...' : ''
+        })
+        
         // 保存到本地存储，使用与settings store一致的键名
         localStorage.setItem('ai_provider', aiSettings.provider)
         
-        // 根据不同提供商保存对应凭证
-        if (aiSettings.provider === 'aliyun-bailian') {
-          localStorage.setItem('ai_app_key', aiSettings.appKey)
-          localStorage.setItem('ai_app_secret', aiSettings.appSecret)
-        } else {
-          localStorage.setItem('ai_api_key', aiSettings.apiKey)
-        }
+        // 保存API密钥
+        localStorage.setItem('ai_api_key', aiSettings.apiKey)
         
         localStorage.setItem('ai_model', aiSettings.model)
+        
+        // 验证保存结果
+        const savedKey = localStorage.getItem('ai_api_key')
+        console.log('AI设置保存后验证:', {
+          saved_provider: localStorage.getItem('ai_provider'),
+          saved_apiKey_exists: !!savedKey,
+          saved_apiKey_preview: savedKey ? savedKey.substring(0, 5) + '...' : ''
+        })
         
         ElMessage.success('AI设置保存成功')
       } catch (error) {

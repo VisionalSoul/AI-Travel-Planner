@@ -188,7 +188,7 @@
 </template>
 
 <script>
-import { ref, reactive, computed } from 'vue'
+import { ref, reactive, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import speechService from '../services/speechService'
@@ -235,8 +235,19 @@ export default {
         return false
       }
       
-      if (new Date(form.startDate) >= new Date(form.endDate)) {
-        ElMessage.warning('结束日期必须晚于开始日期')
+      if (new Date(form.startDate) > new Date(form.endDate)) {
+        ElMessage.warning('结束日期必须晚于或等于开始日期')
+        return false
+      }
+      
+      // 计算日期差
+      const startDate = new Date(form.startDate)
+      const endDate = new Date(form.endDate)
+      const dayDiff = Math.round((endDate - startDate) / (1000 * 60 * 60 * 24))
+      
+      // 检查日期范围是否超过两天
+      if (dayDiff > 2) {
+        ElMessage.warning('因模型能力限制，时间暂时不可超过两天')
         return false
       }
       
@@ -248,18 +259,59 @@ export default {
       return true
     }
     
+    // 语音服务实例
+    let speechService = null
+    
+    // 初始化语音服务
+    const initSpeechService = () => {
+      if (!speechService) {
+        // 导入 SpeechService
+        import('../services/speechService').then(({ default: SpeechService }) => {
+          // 创建实例，使用默认设置
+          speechService = new SpeechService({
+            language: 'zh-CN',
+            continuous: false,
+            interimResults: true
+          })
+        })
+      }
+      return speechService
+    }
+
     // 切换语音识别
     const toggleVoiceRecognition = async () => {
       try {
+        // 确保语音服务已初始化
+        if (!speechService) {
+          await new Promise(resolve => {
+            const timer = setInterval(() => {
+              if (initSpeechService()) {
+                clearInterval(timer)
+                resolve()
+              }
+            }, 100)
+          })
+        }
+        
         if (isListening.value) {
-          const text = await speechService.stop()
-          tripRequirements.value = text
+          const result = speechService.stop()
+          // stop方法不返回文本，保持现有功能
           isListening.value = false
         } else {
           isListening.value = true
-          await speechService.start((result) => {
+          speechService.start(
+            (result) => {
               tripRequirements.value = result.transcript
-            })
+            },
+            (error) => {
+              console.error('语音识别错误:', error)
+              ElMessage.error('语音识别失败，请重试')
+              isListening.value = false
+            },
+            () => {
+              isListening.value = false
+            }
+          )
         }
       } catch (error) {
         console.error('语音识别失败:', error)
@@ -267,6 +319,11 @@ export default {
         isListening.value = false
       }
     }
+    
+    // 组件挂载时初始化语音服务
+    onMounted(() => {
+      initSpeechService()
+    })
     
     // 解析需求文本
     const parseRequirements = () => {
@@ -284,11 +341,19 @@ export default {
       const daysMatch = text.match(/(\d+)天/)
       if (daysMatch) {
         const days = parseInt(daysMatch[1])
+        // 限制天数不超过3天（包括开始日期当天）
+        const limitedDays = Math.min(days, 3)
+        
         const today = new Date()
         form.startDate = today.toISOString().split('T')[0]
         const endDate = new Date(today)
-        endDate.setDate(today.getDate() + days - 1)
+        endDate.setDate(today.getDate() + limitedDays - 1)
         form.endDate = endDate.toISOString().split('T')[0]
+        
+        // 如果用户要求的天数超过限制，显示提示
+        if (days > 3) {
+          ElMessage.warning('因模型能力限制，已将行程天数调整为2天')
+        }
       }
       
       // 提取预算
@@ -329,6 +394,22 @@ export default {
     const generateItinerary = async () => {
       // 验证表单
       if (!validateForm()) return
+      
+      console.log('生成行程前检查 - 刷新设置前:', {
+        localStorage_apiKey_exists: !!localStorage.getItem('ai_api_key'),
+        localStorage_apiKey_preview: localStorage.getItem('ai_api_key') ? localStorage.getItem('ai_api_key').substring(0, 5) + '...' : '',
+        settingsStore_provider: settingsStore.ai.provider,
+        settingsStore_apiKey_exists: !!settingsStore.ai.apiKey
+      })
+      
+      // 刷新设置，确保获取最新的API密钥
+      const refreshedKey = settingsStore.refreshSettings()
+      console.log('生成行程前检查 - 刷新设置后:', {
+        refreshed_apiKey_exists: !!refreshedKey,
+        refreshed_apiKey_preview: refreshedKey ? refreshedKey.substring(0, 5) + '...' : '',
+        settingsStore_provider: settingsStore.ai.provider,
+        settingsStore_apiKey_exists: !!settingsStore.ai.apiKey
+      })
       
       // 检查AI服务配置
       if (!isAiConfigured.value) {
@@ -438,7 +519,7 @@ export default {
       isSaving.value = true
       try {
         // 保存到本地存储和状态管理
-        await tripsStore.addTrip(generatedTrip.value)
+        await tripsStore.createTrip(generatedTrip.value)
         
         // 如果有API，也可以保存到服务器
         // await tripAPI.create(generatedTrip.value)

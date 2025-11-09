@@ -393,7 +393,7 @@ import { useExpensesStore } from '../store/expenses'
 import { Calendar, Wallet, Clock, Edit, Share, Plus, Delete, MapLocation } from '@element-plus/icons-vue'
 import MapComponent from '../components/MapComponent.vue'
 import ExpenseAnalysis from '../components/ExpenseAnalysis.vue'
-import { mapService } from '../services/mapService'
+import mapService from '../services/mapService'
 
 export default {
   name: 'TripDetailView',
@@ -457,7 +457,7 @@ export default {
     
     // 获取行程数据
     const trip = computed(() => {
-      return tripsStore.trips.find(t => t._id === tripId.value)
+      return tripsStore.getTripById(tripId.value)
     })
     
     // 获取所有活动
