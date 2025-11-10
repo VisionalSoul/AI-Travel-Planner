@@ -16,7 +16,7 @@ COPY . .
 RUN npm run build
 
 # 生产阶段
-FROM nginx:alpine
+FROM nginx:1.25-alpine
 
 # 复制构建产物到nginx目录
 COPY --from=build /app/dist /usr/share/nginx/html
