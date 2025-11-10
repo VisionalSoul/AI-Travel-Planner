@@ -2,7 +2,7 @@ import axios from 'axios';
 
 // 创建axios实例
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api',
+  baseURL: '/api', // 使用相对路径，通过nginx反向代理
   headers: {
     'Content-Type': 'application/json'
   }
