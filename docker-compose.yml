@@ -1,11 +1,20 @@
 version: '3.8'
 
+networks:
+  ai_travel_planner_network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.28.0.0/16
+
 services:
   # MySQL数据库服务
   db:
     image: mysql:8.0
     container_name: ai_travel_planner_db
     restart: unless-stopped
+    networks:
+      - ai_travel_planner_network
     environment:
       MYSQL_ROOT_PASSWORD: your_mysql_password
       MYSQL_DATABASE: ai_travel_planner
@@ -29,6 +38,8 @@ services:
       dockerfile: Dockerfile
     container_name: ai_travel_planner_backend
     restart: unless-stopped
+    networks:
+      - ai_travel_planner_network
     depends_on:
       db:
         condition: service_healthy
@@ -54,6 +65,8 @@ services:
       dockerfile: Dockerfile
     container_name: ai_travel_planner_frontend
     restart: unless-stopped
+    networks:
+      - ai_travel_planner_network
     depends_on:
       - backend
     ports:
