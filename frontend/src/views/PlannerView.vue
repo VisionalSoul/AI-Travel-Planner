@@ -235,8 +235,8 @@ export default {
         return false
       }
       
-      if (new Date(form.startDate) > new Date(form.endDate)) {
-        ElMessage.warning('结束日期必须晚于或等于开始日期')
+      if (new Date(form.startDate) >= new Date(form.endDate)) {
+        ElMessage.warning('结束日期必须晚于开始日期')
         return false
       }
       

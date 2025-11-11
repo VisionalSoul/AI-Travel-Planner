@@ -1,20 +1,11 @@
 version: '3.8'
 
-networks:
-  ai_travel_planner_network:
-    driver: bridge
-    ipam:
-      config:
-        - subnet: 172.28.0.0/16
-
 services:
   # MySQL数据库服务
   db:
     image: mysql:8.0
     container_name: ai_travel_planner_db
     restart: unless-stopped
-    networks:
-      - ai_travel_planner_network
     environment:
       MYSQL_ROOT_PASSWORD: your_mysql_password
       MYSQL_DATABASE: ai_travel_planner
@@ -26,10 +17,10 @@ services:
     ports:
       - "3306:3306"
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
-      interval: 10s
-      timeout: 5s
-      retries: 3
+      test: ["CMD", "mysql", "-e", "SELECT 1;", "-u", "root", "-p${MYSQL_ROOT_PASSWORD}"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
 
   # 后端服务
   backend:
@@ -38,11 +29,8 @@ services:
       dockerfile: Dockerfile
     container_name: ai_travel_planner_backend
     restart: unless-stopped
-    networks:
-      - ai_travel_planner_network
     depends_on:
-      db:
-        condition: service_healthy
+      - db
     environment:
       NODE_ENV: production
       PORT: 5000
@@ -65,12 +53,12 @@ services:
       dockerfile: Dockerfile
     container_name: ai_travel_planner_frontend
     restart: unless-stopped
-    networks:
-      - ai_travel_planner_network
     depends_on:
       - backend
     ports:
       - "8080:80"
+    environment:
+      - VITE_API_BASE_URL=http://backend:5000/api
 
 volumes:
   db_data:
