@@ -89,9 +89,9 @@
           </el-button>
         </div>
         
-        <div class="itinerary-days" v-if="trip.itinerary && trip.itinerary.length > 0">
+        <div class="itinerary-days" v-if="processedItinerary && processedItinerary.length > 0">
           <div 
-            v-for="(day, index) in trip.itinerary" 
+            v-for="(day, index) in processedItinerary" 
             :key="index" 
             class="itinerary-day"
           >
@@ -460,12 +460,40 @@ export default {
       return tripsStore.getTripById(tripId.value)
     })
     
+    // 处理后的行程安排数据（确保是对象数组格式）
+    const processedItinerary = computed(() => {
+      if (!trip.value?.itinerary) return []
+      
+      // 检查并解析itinerary数据
+      if (typeof trip.value.itinerary === 'string') {
+        try {
+          return JSON.parse(trip.value.itinerary)
+        } catch (error) {
+          console.error('解析itinerary数据失败:', error)
+          return []
+        }
+      }
+      
+      return trip.value.itinerary
+    })
+    
     // 获取所有活动
     const getAllActivities = () => {
       const activities = []
       if (!trip.value?.itinerary) return activities
       
-      trip.value.itinerary.forEach((day, dayIndex) => {
+      // 检查并解析itinerary数据，如果是JSON字符串则转换为对象数组
+      let itinerary = trip.value.itinerary
+      if (typeof itinerary === 'string') {
+        try {
+          itinerary = JSON.parse(itinerary)
+        } catch (error) {
+          console.error('解析itinerary数据失败:', error)
+          return activities
+        }
+      }
+      
+      itinerary.forEach((day, dayIndex) => {
         if (day.activities) {
           day.activities.forEach(activity => {
             if (activity.location) {
@@ -634,7 +662,7 @@ export default {
     
     // 添加行程日
     const addItineraryDay = () => {
-      const days = trip.value?.itinerary?.length || 0
+      const days = processedItinerary.value.length || 0
       const date = formatDayDate(trip.value.startDate, days)
       
       editingItineraryIndex.value = null
@@ -651,7 +679,7 @@ export default {
     
     // 编辑行程日
     const editItineraryDay = (index) => {
-      const days = trip.value?.itinerary || []
+      const days = processedItinerary.value || []
       const day = days[index]
       
       if (!day) return
@@ -703,16 +731,21 @@ export default {
       
       // 更新行程数据
       const updatedTrip = { ...trip.value }
-      if (!updatedTrip.itinerary) {
-        updatedTrip.itinerary = []
-      }
+      let itinerary = processedItinerary.value
       
       if (editingItineraryIndex.value !== null) {
         // 更新现有日程
-        updatedTrip.itinerary[editingItineraryIndex.value] = dayData
+        itinerary[editingItineraryIndex.value] = dayData
       } else {
         // 添加新日程
-        updatedTrip.itinerary.push(dayData)
+        itinerary.push(dayData)
+      }
+      
+      // 保持原始数据类型，以便后端处理
+      if (typeof updatedTrip.itinerary === 'string') {
+        updatedTrip.itinerary = JSON.stringify(itinerary)
+      } else {
+        updatedTrip.itinerary = itinerary
       }
       
       try {
@@ -740,7 +773,16 @@ export default {
         )
         
         const updatedTrip = { ...trip.value }
-        updatedTrip.itinerary.splice(index, 1)
+        // 确保使用处理后的数据格式
+        const itinerary = processedItinerary.value.filter((_, i) => i !== index)
+        
+        // 保持原始数据类型，以便后端处理
+        if (typeof updatedTrip.itinerary === 'string') {
+          updatedTrip.itinerary = JSON.stringify(itinerary)
+        } else {
+          updatedTrip.itinerary = itinerary
+        }
+        
         await tripsStore.updateTrip(tripId.value, updatedTrip)
         ElMessage.success('日程已删除')
       } catch (error) {
@@ -899,6 +941,7 @@ export default {
       // 状态
       isLoading,
       trip,
+      processedItinerary,
       tripId,
       fileInput,
       itineraryDialogVisible,
